@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Simple platform game</title>
+    <style>
+      * {
+        padding: 0;
+        margin: 0;
+      }
+      canvas {
+        background: lightblue;
+        display: block;
+        margin: 0 auto;
+      }
+    </style>
+  </head>
+
+  <body>
+    <canvas id="game" width="1280px" height="580px"></canvas>
+
+    <script>
+      var canvas = document.getElementById("game");
+      var ctx = canvas.getContext("2d");
+      var floor = new Platform(0, 500, 1300, 80);
+      var platforms = [];
+      platforms[0] = new Platform(1120, 320, 100, 40);
+      platforms[1] = new Platform(710, 160, 100, 40);
+      platforms[2] = new Platform(60, 250, 100, 40);
+      platforms[3] = new Platform(320, 360, 100, 40);
+      platforms[4] = new Platform(580, 430, 100, 40);
+      platforms[5] = new Platform(450, 180, 100, 40);
+      platforms[6] = new Platform(1240, 300, 100, 40);
+      platforms[7] = new Platform(850, 100, 100, 40);
+      platforms[8] = new Platform(970, 390, 100, 40);
+      platforms[9] = new Platform(200, 70, 100, 40);
+
+      var coins = [];
+
+      var obstacles = [];
+
+      var hp = 100;
+
+      var points = 0;
+
+      var speed = 2;
+
+      function Obstacle(px, py, width, height, speed, image) {
+        this.x = px;
+        this.y = py;
+        this.width = width;
+        this.height = height;
+        this.speed = speed;
+        this.graphic = new Image();
+        this.graphic.src = image;
+        this.visible = true;
+      }
+
+      function Platform(px, py, width, height) {
+        this.x = px;
+        this.y = py;
+        this.width = width;
+        this.height = height;
+        this.graphic = new Image();
+        this.graphic.src = "platform.png";
+      }
+
+      function Coin(px, py) {
+        this.x = px;
+        this.y = py;
+        this.width = 30;
+        this.height = 30;
+        this.graphic = new Image();
+        this.graphic.src = "coin.png";
+        this.visible = true;
+      }
+
+      var yPositionOfLastPlatform = 0;
+      function drawPlatforms() {
+        for (var i = 0; i < platforms.length; i++) {
+          ctx.drawImage(
+            platforms[i].graphic,
+            platforms[i].x,
+            platforms[i].y,
+            platforms[i].width,
+            platforms[i].height
+          );
+        }
+
+        // moving platforms
+        for (var i = 0; i < platforms.length; i++) {
+          platforms[i].x -= speed;
+        }
+
+        // if the platform disappears it moves it to the right side with random height
+        for (var i = 0; i < platforms.length; i++) {
+          var p = platforms[i];
+
+          if (p.x < -100) {
+            p.x = 1280;
+            var newY = getHeightForNewPlatform();
+            yPositionOfLastPlatform = newY;
+            p.y = newY;
+
+            var coinRandom = Math.random() * 100;
+            //put coin above the platform
+            if (coinRandom < 30) {
+              var coinY = newY - 40;
+              var coin = new Coin(1315, coinY);
+              coins.push(coin);
+            } else if (coinRandom < 40) {
+              var fire = new Obstacle(1280, 468, 32, 32, speed, "fire.png");
+              obstacles.push(fire);
+            } else if (coinRandom < 55) {
+              var flameY = Math.floor(Math.random() * 340 + 80);
+              var flame = new Obstacle(
+                1280,
+                flameY,
+                70,
+                30,
+                speed * 2,
+                "flame.png"
+              );
+              obstacles.push(flame);
+            }
+          }
+        }
+      }
+
+      function getHeightForNewPlatform() {
+        var randomNumber = Math.random() * 100 + 20;
+        if (randomNumber < 10 && yPositionOfLastPlatform < 350) {
+          return 400;
+        } else {
+          var randomHeight = Math.floor(Math.random() * 340) + 80;
+          while (
+            randomHeight > yPositionOfLastPlatform - 50 &&
+            randomHeight < yPositionOfLastPlatform + 50
+          ) {
+            randomHeight = Math.floor(Math.random() * 340) + 80;
+          }
+          return randomHeight;
+        }
+      }
+
+      function drawCoins() {
+        for (var i = 0; i < coins.length; i++) {
+          if (coins[i].x < -30) {
+            coins.shift;
+          } else if (coins[i].visible == true) {
+            ctx.drawImage(
+              coins[i].graphic,
+              coins[i].x,
+              coins[i].y,
+              coins[i].width,
+              coins[i].height
+            );
+          }
+        }
+
+        //moving coins
+        for (var i = 0; i < coins.length; i++) {
+          coins[i].x -= speed;
+        }
+      }
+
+      function coinsCollision() {
+        for (var i = 0; i < coins.length; i++) {
+          var c = coins[i];
+
+          if (
+            heroY < c.y + 30 &&
+            heroY > c.y &&
+            heroX < c.x + 30 &&
+            heroX > c.x
+          ) {
+            if (c.visible == true) {
+              coins[i].visible = false;
+              points += 10;
+            }
+          }
+        }
+      }
+
+      function drawObstacles() {
+        for (var i = 0; i < obstacles.length; i++) {
+          if (obstacles[i].x < -30) {
+            obstacles.shift;
+          } else if (obstacles[i].visible == true) {
+            ctx.drawImage(
+              obstacles[i].graphic,
+              obstacles[i].x,
+              obstacles[i].y,
+              obstacles[i].width,
+              obstacles[i].height
+            );
+          }
+        }
+
+        for (var i = 0; i < obstacles.length; i++) {
+          obstacles[i].x -= obstacles[i].speed;
+        }
+      }
+
+      function obstaclesCollision() {
+        for (var i = 0; i < obstacles.length; i++) {
+          var o = obstacles[i];
+
+          if (
+            o.x < heroX &&
+            o.x + o.width > heroX &&
+            o.y < heroY &&
+            o.y + o.height > heroY
+          ) {
+            if (o.visible == true) {
+              hp -= 10;
+              o.visible = false;
+            }
+          }
+        }
+      }
+
+      function drawStats() {
+        ctx.font = "20px Arial";
+        ctx.fillText("HP: " + hp, 30, 30);
+        ctx.fillText("Score: " + points, 1160, 30);
+      }
+
+      var heroX = 50;
+      var heroY = 50;
+      var dy = 3;
+
+      function drawHero() {
+        ctx.beginPath();
+        ctx.arc(heroX, heroY, 20, 0, Math.PI * 2);
+        ctx.fillStyle = "#cc0000";
+        ctx.fill();
+        ctx.closePath();
+      }
+
+      var jumpCounter = 0;
+      function gravity() {
+        if (dy >= 0) {
+          //ball hangs in the air (so gravity works) or it stands on the platform (gravity = 0)
+          dy = 3;
+
+          if (heroY > 479) {
+            //ball is on the floor
+            dy = 0;
+          } else {
+            for (var i = 0; i < platforms.length; i++) {
+              var p = platforms[i];
+              if (
+                heroX > p.x &&
+                heroX < p.x + p.width &&
+                heroY > p.y - 20 &&
+                heroY < p.y - 16
+              ) {
+                dy = 0;
+              }
+            }
+          }
+        } else {
+          //jump in progress, gravity = -5
+          if (jumpCounter < 80) {
+            jumpCounter += 6;
+          } else if (jumpCounter < 120) {
+            dy = -5;
+            jumpCounter += 5;
+          } else if (jumpCounter < 140) {
+            dy = -4;
+            jumpCounter += 4;
+          } else {
+            dy = 3;
+            jumpCounter = 0;
+          }
+        }
+
+        heroY += dy;
+      }
+
+      function jump() {
+        if (dy == 0) {
+          dy = -6;
+        }
+      }
+
+      var rightPressed = false;
+      var leftPressed = false;
+
+      document.addEventListener("keydown", keyDownHandler, false);
+      document.addEventListener("keyup", keyUpHandler, false);
+
+      function keyDownHandler(e) {
+        if (e.key == "Right" || e.key == "ArrowRight") {
+          rightPressed = true;
+        } else if (e.key == "Left" || e.key == "ArrowLeft") {
+          leftPressed = true;
+        } else if (e.key == "Up" || e.key == "ArrowUp") {
+          jump();
+        }
+      }
+
+      function keyUpHandler(e) {
+        if (e.key == "Right" || e.key == "ArrowRight") {
+          rightPressed = false;
+        } else if (e.key == "Left" || e.key == "ArrowLeft") {
+          leftPressed = false;
+        }
+      }
+
+      // function draw() {
+      //   ctx.clearRect(0, 0, canvas.width, canvas.height);
+      //   ctx.drawImage(
+      //     floor.graphic,
+      //     floor.x,
+      //     floor.y,
+      //     floor.width,
+      //     floor.height
+      //   );
+      //   drawPlatforms();
+      //   gravity();
+      //   drawHero();
+      //   drawCoins();
+      //   coinsCollision();
+      //   drawObstacles();
+      //   obstaclesCollision();
+      //   drawStats();
+
+      //   if (hp <= 0) {
+      //     window.alert("Your score: " + points);
+      //     location.reload();
+      //   }
+
+      //   if (points >= 100 && points < 200) {
+      //     speed = 3;
+      //   }
+
+      //   if (points >= 200 && points < 300) {
+      //     speed = 4;
+      //   }
+
+      //   if (points >= 300 && points < 400) {
+      //     speed = 5;
+      //   }
+
+      //   if (points >= 400 && points < 500) {
+      //     speed = 6;
+      //   }
+
+      //   if (rightPressed) {
+      //     heroX += 4;
+      //     if (heroX + 20 > canvas.width) {
+      //       heroX = canvas.width - 20;
+      //     }
+      //   } else if (leftPressed) {
+      //     heroX -= 4;
+      //     if (heroX < 20) {
+      //       heroX = 20;
+      //     }
+
+      //     requestAnimationFrame(draw);
+      //   }
+      // }
+
+      function drawFloor() {
+        ctx.drawImage(
+          floor.graphic,
+          floor.x,
+          floor.y,
+          floor.width,
+          floor.height
+        );
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawPlatforms();
+        drawFloor();
+        drawHero();
+        gravity();
+        drawCoins();
+        drawObstacles();
+        coinsCollision();
+        obstaclesCollision();
+        drawStats();
+
+        // if(x + dx > canvas.width-ballRadius || x + dx < ballRadius) {
+        //     dx = -dx;
+        // }
+        // if(y + dy < ballRadius) {
+        //     dy = -dy;
+        // }
+        // else if(y + dy > canvas.height-ballRadius) {
+        //     if(x > paddleX && x < paddleX + paddleWidth) {
+        //         dy = -dy;
+        //     }
+        //     else {
+        //         lives--;
+        //         if(!lives) {
+        //             alert("GAME OVER");
+        //             document.location.reload();
+        //         }
+        //         else {
+        //             x = canvas.width/2;
+        //             y = canvas.height-30;
+        //             dx = 2;
+        //             dy = -2;
+        //             paddleX = (canvas.width-paddleWidth)/2;
+        //         }
+        //     }
+        // }
+
+        if (rightPressed) {
+          heroX += 4;
+          // if (heroX + 20 > canvas.width) {
+          //   heroX = canvas.width - 20;
+          // }
+        } else if (leftPressed) {
+          heroX -= 4;
+          // if (heroX < 20) {
+          //   heroX = 20;
+          // }
+        }
+        requestAnimationFrame(draw);
+      }
+
+      draw();
+      // setInterval(draw, 10);
+    </script>
+  </body>
+</html>
