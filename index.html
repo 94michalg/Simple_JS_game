@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <title>Simple platform game</title>
+    <title>Simple arcade game</title>
     <style>
       * {
         padding: 0;
@@ -118,13 +118,7 @@
               groundFires.push(fire);
             } else if (coinRandom < 55) {
               var flameY = Math.floor(Math.random() * 340 + 80);
-              var flame = new Obstacle(
-                1280,
-                flameY,
-                70,
-                30,
-                "flame.png"
-              );
+              var flame = new Obstacle(1280, flameY, 70, 30, "flame.png");
               movingFlames.push(flame);
             }
           }
@@ -226,23 +220,41 @@
         }
       }
 
-      // function groundFiresCollision() {
-      //   for (var i = 0; i < groundFires.length; i++) {
-      //     var o = groundFires[i];
+      function groundFiresCollision() {
+        for (var i = 0; i < groundFires.length; i++) {
+          var o = groundFires[i];
 
-      //     if (
-      //       o.x < heroX &&
-      //       o.x + o.width > heroX &&
-      //       o.y < heroY &&
-      //       o.y + o.height > heroY
-      //     ) {
-      //       if (o.visible == true) {
-      //         hp -= 10;
-      //         o.visible = false;
-      //       }
-      //     }
-      //   }
-      // }
+          if (
+            o.x < heroX &&
+            o.x + o.width > heroX &&
+            o.y < heroY &&
+            o.y + o.height > heroY
+          ) {
+            if (o.visible == true) {
+              hp -= 20;
+              o.visible = false;
+            }
+          }
+        }
+      }
+
+      function movingFlamesCollistion() {
+        for (var i = 0; i < movingFlames.length; i++) {
+          var o = movingFlames[i];
+
+          if (
+            o.x < heroX &&
+            o.x + o.width > heroX &&
+            o.y < heroY &&
+            o.y + o.height > heroY
+          ) {
+            if (o.visible == true) {
+              hp -= 10;
+              o.visible = false;
+            }
+          }
+        }
+      }
 
       function drawStats() {
         ctx.font = "20px Arial";
@@ -346,7 +358,8 @@
         drawGroundFires();
         drawMovingFlames();
         coinsCollision();
-        // groundFiresCollision();
+        groundFiresCollision();
+        movingFlamesCollistion();
         drawStats();
 
         if (rightPressed) {
@@ -361,7 +374,7 @@
           }
         }
 
-        if (hp == 0) {
+        if (hp <= 0) {
           alert("GAME OVER! Your score: " + score);
           document.location.reload();
         } else {
