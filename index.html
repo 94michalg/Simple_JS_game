@@ -22,8 +22,24 @@
     <script>
       var canvas = document.getElementById("game");
       var ctx = canvas.getContext("2d");
-      var floor = new Platform(0, 500, 1300, 80);
+
+      var heroRadius = 20;
+      var heroX = 100;
+      var heroY = 100;
+      var movingSpeed = 7;
+      var dy = 6; // gravity
+      var rightPressed = false;
+      var leftPressed = false;
+      var hp = 100;
+      var score = 0;
+      var speed = 4; //Basic speed
+
       var platforms = [];
+      var coins = [];
+      var groundFires = [];
+      var movingFlames = [];
+
+      var floor = new Platform(0, 500, 1300, 80);
       platforms[0] = new Platform(1120, 320, 100, 40);
       platforms[1] = new Platform(710, 160, 100, 40);
       platforms[2] = new Platform(60, 250, 100, 40);
@@ -35,22 +51,11 @@
       platforms[8] = new Platform(970, 390, 100, 40);
       platforms[9] = new Platform(200, 70, 100, 40);
 
-      var coins = [];
-
-      var obstacles = [];
-
-      var hp = 100;
-
-      var points = 0;
-
-      var speed = 2;
-
-      function Obstacle(px, py, width, height, speed, image) {
+      function Obstacle(px, py, width, height, image) {
         this.x = px;
         this.y = py;
         this.width = width;
         this.height = height;
-        this.speed = speed;
         this.graphic = new Image();
         this.graphic.src = image;
         this.visible = true;
@@ -109,8 +114,8 @@
               var coin = new Coin(1315, coinY);
               coins.push(coin);
             } else if (coinRandom < 40) {
-              var fire = new Obstacle(1280, 468, 32, 32, speed, "fire.png");
-              obstacles.push(fire);
+              var fire = new Obstacle(1280, 468, 32, 32, "fire.png");
+              groundFires.push(fire);
             } else if (coinRandom < 55) {
               var flameY = Math.floor(Math.random() * 340 + 80);
               var flame = new Obstacle(
@@ -118,10 +123,9 @@
                 flameY,
                 70,
                 30,
-                speed * 2,
                 "flame.png"
               );
-              obstacles.push(flame);
+              movingFlames.push(flame);
             }
           }
         }
@@ -176,63 +180,79 @@
           ) {
             if (c.visible == true) {
               coins[i].visible = false;
-              points += 10;
+              score += 10;
             }
           }
         }
       }
 
-      function drawObstacles() {
-        for (var i = 0; i < obstacles.length; i++) {
-          if (obstacles[i].x < -30) {
-            obstacles.shift;
-          } else if (obstacles[i].visible == true) {
+      function drawGroundFires() {
+        for (var i = 0; i < groundFires.length; i++) {
+          if (groundFires[i].x < -30) {
+            groundFires.shift;
+          } else if (groundFires[i].visible == true) {
             ctx.drawImage(
-              obstacles[i].graphic,
-              obstacles[i].x,
-              obstacles[i].y,
-              obstacles[i].width,
-              obstacles[i].height
+              groundFires[i].graphic,
+              groundFires[i].x,
+              groundFires[i].y,
+              groundFires[i].width,
+              groundFires[i].height
             );
           }
         }
 
-        for (var i = 0; i < obstacles.length; i++) {
-          obstacles[i].x -= obstacles[i].speed;
+        for (var i = 0; i < groundFires.length; i++) {
+          groundFires[i].x -= speed;
         }
       }
 
-      function obstaclesCollision() {
-        for (var i = 0; i < obstacles.length; i++) {
-          var o = obstacles[i];
-
-          if (
-            o.x < heroX &&
-            o.x + o.width > heroX &&
-            o.y < heroY &&
-            o.y + o.height > heroY
-          ) {
-            if (o.visible == true) {
-              hp -= 10;
-              o.visible = false;
-            }
+      function drawMovingFlames() {
+        for (var i = 0; i < movingFlames.length; i++) {
+          if (movingFlames[i].x < -30) {
+            movingFlames.shift;
+          } else if (movingFlames[i].visible == true) {
+            ctx.drawImage(
+              movingFlames[i].graphic,
+              movingFlames[i].x,
+              movingFlames[i].y,
+              movingFlames[i].width,
+              movingFlames[i].height
+            );
           }
         }
+
+        for (var i = 0; i < movingFlames.length; i++) {
+          movingFlames[i].x -= speed * 2;
+        }
       }
+
+      // function groundFiresCollision() {
+      //   for (var i = 0; i < groundFires.length; i++) {
+      //     var o = groundFires[i];
+
+      //     if (
+      //       o.x < heroX &&
+      //       o.x + o.width > heroX &&
+      //       o.y < heroY &&
+      //       o.y + o.height > heroY
+      //     ) {
+      //       if (o.visible == true) {
+      //         hp -= 10;
+      //         o.visible = false;
+      //       }
+      //     }
+      //   }
+      // }
 
       function drawStats() {
         ctx.font = "20px Arial";
         ctx.fillText("HP: " + hp, 30, 30);
-        ctx.fillText("Score: " + points, 1160, 30);
+        ctx.fillText("Score: " + score, 1160, 30);
       }
-
-      var heroX = 50;
-      var heroY = 50;
-      var dy = 3;
 
       function drawHero() {
         ctx.beginPath();
-        ctx.arc(heroX, heroY, 20, 0, Math.PI * 2);
+        ctx.arc(heroX, heroY, heroRadius, 0, Math.PI * 2);
         ctx.fillStyle = "#cc0000";
         ctx.fill();
         ctx.closePath();
@@ -242,7 +262,7 @@
       function gravity() {
         if (dy >= 0) {
           //ball hangs in the air (so gravity works) or it stands on the platform (gravity = 0)
-          dy = 3;
+          dy = 5;
 
           if (heroY > 479) {
             //ball is on the floor
@@ -253,8 +273,8 @@
               if (
                 heroX > p.x &&
                 heroX < p.x + p.width &&
-                heroY > p.y - 20 &&
-                heroY < p.y - 16
+                heroY > p.y - heroRadius &&
+                heroY < p.y - heroRadius + 6
               ) {
                 dy = 0;
               }
@@ -263,15 +283,15 @@
         } else {
           //jump in progress, gravity = -5
           if (jumpCounter < 80) {
-            jumpCounter += 6;
+            jumpCounter += 12;
           } else if (jumpCounter < 120) {
-            dy = -5;
-            jumpCounter += 5;
+            dy = -10;
+            jumpCounter += 10;
           } else if (jumpCounter < 140) {
-            dy = -4;
-            jumpCounter += 4;
+            dy = -5;
+            jumpCounter += 2;
           } else {
-            dy = 3;
+            dy = 5;
             jumpCounter = 0;
           }
         }
@@ -281,12 +301,9 @@
 
       function jump() {
         if (dy == 0) {
-          dy = -6;
+          dy = -12;
         }
       }
-
-      var rightPressed = false;
-      var leftPressed = false;
 
       document.addEventListener("keydown", keyDownHandler, false);
       document.addEventListener("keyup", keyUpHandler, false);
@@ -309,60 +326,6 @@
         }
       }
 
-      // function draw() {
-      //   ctx.clearRect(0, 0, canvas.width, canvas.height);
-      //   ctx.drawImage(
-      //     floor.graphic,
-      //     floor.x,
-      //     floor.y,
-      //     floor.width,
-      //     floor.height
-      //   );
-      //   drawPlatforms();
-      //   gravity();
-      //   drawHero();
-      //   drawCoins();
-      //   coinsCollision();
-      //   drawObstacles();
-      //   obstaclesCollision();
-      //   drawStats();
-
-      //   if (hp <= 0) {
-      //     window.alert("Your score: " + points);
-      //     location.reload();
-      //   }
-
-      //   if (points >= 100 && points < 200) {
-      //     speed = 3;
-      //   }
-
-      //   if (points >= 200 && points < 300) {
-      //     speed = 4;
-      //   }
-
-      //   if (points >= 300 && points < 400) {
-      //     speed = 5;
-      //   }
-
-      //   if (points >= 400 && points < 500) {
-      //     speed = 6;
-      //   }
-
-      //   if (rightPressed) {
-      //     heroX += 4;
-      //     if (heroX + 20 > canvas.width) {
-      //       heroX = canvas.width - 20;
-      //     }
-      //   } else if (leftPressed) {
-      //     heroX -= 4;
-      //     if (heroX < 20) {
-      //       heroX = 20;
-      //     }
-
-      //     requestAnimationFrame(draw);
-      //   }
-      // }
-
       function drawFloor() {
         ctx.drawImage(
           floor.graphic,
@@ -380,53 +343,34 @@
         drawHero();
         gravity();
         drawCoins();
-        drawObstacles();
+        drawGroundFires();
+        drawMovingFlames();
         coinsCollision();
-        obstaclesCollision();
+        // groundFiresCollision();
         drawStats();
 
-        // if(x + dx > canvas.width-ballRadius || x + dx < ballRadius) {
-        //     dx = -dx;
-        // }
-        // if(y + dy < ballRadius) {
-        //     dy = -dy;
-        // }
-        // else if(y + dy > canvas.height-ballRadius) {
-        //     if(x > paddleX && x < paddleX + paddleWidth) {
-        //         dy = -dy;
-        //     }
-        //     else {
-        //         lives--;
-        //         if(!lives) {
-        //             alert("GAME OVER");
-        //             document.location.reload();
-        //         }
-        //         else {
-        //             x = canvas.width/2;
-        //             y = canvas.height-30;
-        //             dx = 2;
-        //             dy = -2;
-        //             paddleX = (canvas.width-paddleWidth)/2;
-        //         }
-        //     }
-        // }
-
         if (rightPressed) {
-          heroX += 4;
-          // if (heroX + 20 > canvas.width) {
-          //   heroX = canvas.width - 20;
-          // }
+          heroX += movingSpeed;
+          if (heroX + heroRadius > canvas.width) {
+            heroX = canvas.width - heroRadius;
+          }
         } else if (leftPressed) {
-          heroX -= 4;
-          // if (heroX < 20) {
-          //   heroX = 20;
-          // }
+          heroX -= movingSpeed;
+          if (heroX < heroRadius) {
+            heroX = heroRadius;
+          }
         }
-        requestAnimationFrame(draw);
+
+        if (hp == 0) {
+          alert("GAME OVER! Your score: " + score);
+          document.location.reload();
+        } else {
+          speed = 4 + Math.floor(score / 100);
+          requestAnimationFrame(draw);
+        }
       }
 
       draw();
-      // setInterval(draw, 10);
     </script>
   </body>
 </html>
